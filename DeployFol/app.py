@@ -1,75 +1,88 @@
 import streamlit as st
-import numpy as np
 import pandas as pd
 import joblib
 
-# Load saved objects
-logi = joblib.load("logistic.pkl")
+# ---------------- LOAD MODELS AND PREPROCESSORS ----------------
+logistic = joblib.load("logistic.pkl")
 svm = joblib.load("svm.pkl")
 dt = joblib.load("dt.pkl")
 nb = joblib.load("nb.pkl")
 scaler = joblib.load("scaler.pkl")
 label = joblib.load("label_encoder.pkl")
 
-# Accuracy values (use your actual values)
-model_accuracy = {
-    "Logistic Regression": 0.92,
-    "SVM": 0.93,
-    "Decision Tree": 0.80,
-    "Naive Bayes": 0.90
-}
-
-models = {
-    "Logistic Regression": logi,
-    "SVM": svm,
-    "Decision Tree": dt,
-    "Naive Bayes": nb
-}
-
-best_model_name = max(model_accuracy, key=model_accuracy.get)
-best_model = models[best_model_name]
-
-# App UI
-st.set_page_config(page_title="Dry Bean Classifier", layout="centered")
+# ---------------- APP CONFIG ----------------
+st.set_page_config(page_title="Dry Bean Classification", layout="wide")
 st.title("🌱 Dry Bean Classification System")
-st.write("Predict the class of dry beans using machine learning.")
+st.write("Enter bean features below and click **Predict** to see the result.")
 
-# Sidebar input
-st.sidebar.header("Enter Bean Features")
+# ---------------- INPUT SECTION ----------------
+st.subheader("📥 Enter Bean Features")
 
-def user_input():
-    return np.array([
-        st.sidebar.number_input("Area", 0.0),
-        st.sidebar.number_input("Perimeter", 0.0),
-        st.sidebar.number_input("MajorAxisLength", 0.0),
-        st.sidebar.number_input("MinorAxisLength", 0.0),
-        st.sidebar.number_input("AspectRation", 0.0),
-        st.sidebar.number_input("Eccentricity", 0.0),
-        st.sidebar.number_input("ConvexArea", 0.0),
-        st.sidebar.number_input("EquivDiameter", 0.0),
-        st.sidebar.number_input("Extent", 0.0),
-        st.sidebar.number_input("Solidity", 0.0),
-        st.sidebar.number_input("roundness", 0.0),
-        st.sidebar.number_input("Compactness", 0.0),
-        st.sidebar.number_input("ShapeFactor1", 0.0),
-        st.sidebar.number_input("ShapeFactor2", 0.0),
-        st.sidebar.number_input("ShapeFactor3", 0.0),
-        st.sidebar.number_input("ShapeFactor4", 0.0)
-    ]).reshape(1, -1)
+# Two-column layout for input
+col1, col2 = st.columns(2)
 
-input_data = user_input()
+with col1:
+    area = st.number_input("Area", min_value=0.0, value=10000.0, step=1.0, format="%.6f")
+    perimeter = st.number_input("Perimeter", min_value=0.0, value=400.0, step=1.0, format="%.6f")
+    major = st.number_input("MajorAxisLength", min_value=0.0, value=200.0, step=0.01, format="%.6f")
+    minor = st.number_input("MinorAxisLength", min_value=0.0, value=100.0, step=0.01, format="%.6f")
+    aspect = st.number_input("AspectRation", min_value=0.0, value=2.0, step=0.001, format="%.6f")
+    ecc = st.number_input("Eccentricity", min_value=0.0, value=0.7, step=0.001, format="%.6f")
+    convex = st.number_input("ConvexArea", min_value=0.0, value=12000.0, step=1.0, format="%.6f")
+    equiv = st.number_input("EquivDiameter", min_value=0.0, value=100.0, step=0.01, format="%.6f")
 
-# Prediction
-scaled_data = scaler.transform(input_data)
-prediction = best_model.predict(scaled_data)
-predicted_class = label.inverse_transform(prediction)[0]
+with col2:
+    extent = st.number_input("Extent", min_value=0.0, value=0.75, step=0.001, format="%.6f")
+    solidity = st.number_input("Solidity", min_value=0.0, value=0.95, step=0.001, format="%.6f")
+    roundness = st.number_input("Roundness", min_value=0.0, value=0.7, step=0.001, format="%.6f")
+    compact = st.number_input("Compactness", min_value=0.0, value=0.5, step=0.001, format="%.6f")
+    sf1 = st.number_input("ShapeFactor1", min_value=0.0, value=0.007331506, step=0.000001, format="%.9f")
+    sf2 = st.number_input("ShapeFactor2", min_value=0.0, value=0.003147289, step=0.000001, format="%.9f")
+    sf3 = st.number_input("ShapeFactor3", min_value=0.0, value=0.834222388, step=0.000001, format="%.9f")
+    sf4 = st.number_input("ShapeFactor4", min_value=0.0, value=0.998723889, step=0.000001, format="%.9f")
 
-st.subheader("🔮 Prediction Result")
-st.success(f"Predicted Bean Class: **{predicted_class}**")
+# ---------------- PREDICT BUTTON ----------------
+if st.button("Predict"):
 
-# Accuracy table
-st.subheader("📊 Model Accuracy Comparison")
-acc_df = pd.DataFrame.from_dict(model_accuracy, orient="index", columns=["Accuracy"])
-st.table(acc_df)
+    # ---------------- CREATE DATAFRAME ----------------
+    input_df = pd.DataFrame([{
+        "Area": area,
+        "Perimeter": perimeter,
+        "MajorAxisLength": major,
+        "MinorAxisLength": minor,
+        "AspectRation": aspect,
+        "Eccentricity": ecc,
+        "ConvexArea": convex,
+        "EquivDiameter": equiv,
+        "Extent": extent,
+        "Solidity": solidity,
+        "roundness": roundness,
+        "Compactness": compact,
+        "ShapeFactor1": sf1,
+        "ShapeFactor2": sf2,
+        "ShapeFactor3": sf3,
+        "ShapeFactor4": sf4
+    }])
 
-st.info(f"🏆 Best Model Selected: **{best_model_name}**")
+    # ---------------- SCALE INPUT ----------------
+    input_scaled = scaler.transform(input_df)
+
+    # ---------------- BEST MODEL PREDICTION ----------------
+    best_model = svm  # automatically use best model
+    prediction = best_model.predict(input_scaled)
+    predicted_class = label.inverse_transform(prediction)[0]
+
+    st.subheader("🔮 Prediction Result")
+    st.success(f"Predicted Bean Class: **{predicted_class}**")
+
+    # ---------------- SHOW MODEL ACCURACY ----------------
+    st.subheader("📊 Model Accuracy Comparison")
+    accuracy_data = pd.DataFrame({
+        "Model": ["Logistic Regression", "SVM", "Decision Tree", "Naive Bayes"],
+        "Accuracy": [0.92, 0.93, 0.80, 0.90]  # Replace with your actual test accuracies
+    })
+    st.table(accuracy_data)
+
+    # ---------------- OPTIONAL: Show input data ----------------
+    with st.expander("🔍 View Entered Input Data"):
+        st.dataframe(input_df)
